@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import { getOverview } from '@/lib/analytics/overview';
 import UserGrowthChart from '@/components/analytics/UserGrowthChart';
+import DateFilter from '@/components/analytics/DateFilter';
 
-export default async function Home() {
-  const data = await getOverview('2026-08-01', '2026-09-09');
+export default async function Home({ searchParams }: { searchParams: { from?: string; to?: string } }) {
+  const from = searchParams.from || '2026-08-01';
+  const to = searchParams.to || '2026-09-09';
+  const data = await getOverview(from, to);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -20,9 +23,14 @@ export default async function Home() {
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Dashboard Overview</h2>
-        <p className="text-gray-600">API endpoints are ready. Visit <Link href="/events" className="text-primary underline">Events</Link>, <Link href="/retention" className="text-primary underline">Retention</Link>, <Link href="/funnel" className="text-primary underline">Funnel</Link>, or <Link href="/settings" className="text-primary underline">Settings</Link> to explore.</p>
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">Dashboard Overview</h2>
+            <p className="text-gray-600">Key metrics and trends for the selected period.</p>
+          </div>
+          <DateFilter />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500">Total Events</h3>
             <p className="mt-2 text-3xl font-bold text-gray-900">{data.totalEvents.toLocaleString()}</p>
@@ -37,7 +45,7 @@ export default async function Home() {
           </div>
         </div>
         <div className="mt-8">
-          <UserGrowthChart from="2026-08-01" to="2026-09-09" />
+          <UserGrowthChart from={from} to={to} />
         </div>
       </main>
     </div>

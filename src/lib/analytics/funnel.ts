@@ -13,6 +13,7 @@ const FUNNEL_STEPS = [
 export async function getFunnel(): Promise<FunnelResponse> {
   const steps: FunnelStep[] = [];
   let prevCount = 0;
+  let firstCount = 0;
 
   for (let i = 0; i < FUNNEL_STEPS.length; i++) {
     const eventName = FUNNEL_STEPS[i];
@@ -21,12 +22,18 @@ export async function getFunnel(): Promise<FunnelResponse> {
       .where(sql`${events.eventName} = ${eventName}`);
 
     const currentCount = Number(result[0]?.count ?? 0);
+    if (i === 0) firstCount = currentCount;
+
+    const conversionFromPrevious = prevCount > 0 ? Math.round((currentCount / prevCount) * 100) : 0;
+    const conversionFromFirst = firstCount > 0 ? Math.round((currentCount / firstCount) * 100) : 0;
     const dropoff = prevCount > 0 ? Math.round(((prevCount - currentCount) / prevCount) * 100) : 0;
 
     steps.push({
       eventName,
       count: currentCount,
       dropoff,
+      conversionFromPrevious,
+      conversionFromFirst,
     });
     prevCount = currentCount;
   }

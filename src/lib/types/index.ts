@@ -47,6 +47,8 @@ export interface FunnelStep {
   eventName: string;
   count: number;
   dropoff: number;
+  conversionFromPrevious: number;
+  conversionFromFirst: number;
 }
 
 export interface FunnelResponse {
