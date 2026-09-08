@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import RetentionHeatmap from '@/components/analytics/RetentionHeatmap';
 
 export default function RetentionPage() {
   return (
@@ -17,10 +18,10 @@ export default function RetentionPage() {
       </header>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Cohort Retention</h2>
-        <p className="text-gray-600">This page will display cohort retention heatmaps. Use the API endpoint <code className="bg-gray-100 px-1 py-0.5 rounded">/api/analytics/retention</code> to fetch data.</p>
-        <pre className="mt-4 bg-gray-100 p-4 rounded text-sm overflow-x-auto">
-{`GET /api/analytics/retention?from=2024-01-01&to=2024-12-31`}
-        </pre>
+        <p className="text-gray-600 mb-6">
+          Shows the percentage of users from each signup cohort who returned on subsequent days.
+        </p>
+        <RetentionHeatmap />
       </main>
     </div>
   );
