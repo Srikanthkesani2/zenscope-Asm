@@ -54,3 +54,15 @@ export interface FunnelStep {
 export interface FunnelResponse {
   steps: FunnelStep[];
 }
+
+export interface RevenueTimeSeriesPoint {
+  date: string;
+  revenue: number;
+}
+
+export interface RevenueResponse {
+  totalRevenue: number;
+  revenueTimeSeries: RevenueTimeSeriesPoint[];
+  averageRevenuePerUser: number;
+  purchasingUsers: number;
+}

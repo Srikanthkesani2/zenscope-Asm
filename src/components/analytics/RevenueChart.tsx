@@ -3,20 +3,16 @@
 import { useEffect, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import RecordDrawer from './RecordDrawer';
+import { RevenueResponse, RevenueTimeSeriesPoint } from '@/lib/types';
 
-interface DataPoint {
-  date: string;
-  count: number;
-}
-
-interface UserGrowthChartProps {
+interface RevenueChartProps {
   from: string;
   to: string;
   source?: string;
 }
 
-export default function UserGrowthChart({ from, to, source }: UserGrowthChartProps) {
-  const [data, setData] = useState<DataPoint[]>([]);
+export default function RevenueChart({ from, to, source }: RevenueChartProps) {
+  const [data, setData] = useState<RevenueResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -31,13 +27,13 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
       try {
         const params = new URLSearchParams({ from, to });
         if (source) params.set('source', source);
-        const res = await fetch(`/api/analytics/user-growth?${params.toString()}`);
+        const res = await fetch(`/api/analytics/revenue?${params.toString()}`);
         if (!res.ok) {
-          throw new Error(`Failed to fetch user growth data (status ${res.status})`);
+          throw new Error(`Failed to fetch revenue data (status ${res.status})`);
         }
-        const json = await res.json();
+        const json: RevenueResponse = await res.json();
         if (!cancelled) {
-          setData(json.series || []);
+          setData(json);
         }
       } catch (err) {
         if (!cancelled) {
@@ -61,16 +57,11 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
     setDrawerDate(null);
   };
 
-  const handleDataPointClick = (date: string) => {
-    setDrawerDate(date);
-    setDrawerOpen(true);
-  };
-
   if (loading) {
     return (
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">User Growth Trend</h3>
-        <div className="h-64 sm:h-80 flex items-center justify-center text-gray-500">Loading chart data...</div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Analytics</h3>
+        <div className="h-64 sm:h-80 flex items-center justify-center text-gray-500">Loading revenue data...</div>
       </div>
     );
   }
@@ -78,25 +69,28 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
   if (error) {
     return (
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">User Growth Trend</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Analytics</h3>
         <div className="h-64 sm:h-80 flex items-center justify-center text-red-600">Error: {error}</div>
       </div>
     );
   }
 
-  if (data.length === 0) {
+  if (!data || data.revenueTimeSeries.length === 0) {
     return (
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">User Growth Trend</h3>
-        <div className="h-64 sm:h-80 flex items-center justify-center text-gray-500">No signup data available for the selected period.</div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Analytics</h3>
+        <div className="h-64 sm:h-80 flex items-center justify-center text-gray-500">No revenue data available for the selected period.</div>
       </div>
     );
   }
 
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
+
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">User Growth Trend</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Revenue Analytics</h3>
         <button
           onClick={handleChartClick}
           className="text-sm text-primary hover:underline whitespace-nowrap"
@@ -104,9 +98,23 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
           View underlying records
         </button>
       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-gray-50 p-3 sm:p-4 rounded">
+          <p className="text-xs sm:text-sm text-gray-500">Total Revenue</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(data.totalRevenue)}</p>
+        </div>
+        <div className="bg-gray-50 p-3 sm:p-4 rounded">
+          <p className="text-xs sm:text-sm text-gray-500">Purchasing Users</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{data.purchasingUsers.toLocaleString()}</p>
+        </div>
+        <div className="bg-gray-50 p-3 sm:p-4 rounded">
+          <p className="text-xs sm:text-sm text-gray-500">Avg Revenue per User</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(data.averageRevenuePerUser)}</p>
+        </div>
+      </div>
       <div className="h-64 sm:h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <AreaChart data={data.revenueTimeSeries} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
@@ -116,21 +124,21 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
                 return `${date.getMonth() + 1}/${date.getDate()}`;
               }}
             />
-            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+            <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `$${value}`} />
             <Tooltip
               labelFormatter={(label) => {
                 const date = new Date(label);
                 return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
               }}
-              formatter={(value: unknown) => [`${value} signups`, 'Users']}
+              formatter={(value: unknown) => [formatCurrency(Number(value)), 'Revenue']}
             />
             <Area
               type="monotone"
-              dataKey="count"
-              stroke="#6366f1"
+              dataKey="revenue"
+              stroke="#10b981"
               fillOpacity={0.2}
-              fill="#6366f1"
-              onClick={() => handleChartClick()}
+              fill="#10b981"
+              onClick={handleChartClick}
               style={{ cursor: 'pointer' }}
             />
           </AreaChart>
@@ -143,9 +151,9 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
           from: drawerDate ? drawerDate : from,
           to: drawerDate ? drawerDate : to,
           source,
-          eventName: drawerDate ? undefined : 'signup_completed',
+          eventName: 'purchase_completed',
         }}
-        title={drawerDate ? `Records for ${drawerDate}` : 'All User Growth Records'}
+        title={drawerDate ? `Revenue Records for ${drawerDate}` : 'All Revenue Records'}
       />
     </div>
   );

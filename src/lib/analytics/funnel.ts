@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { events } from '@/lib/db/schema';
-import { sql, count } from 'drizzle-orm';
+import { sql, count, and, gte, lte } from 'drizzle-orm';
 import { FunnelResponse, FunnelStep } from '@/lib/types';
 
 const FUNNEL_STEPS = [
@@ -10,16 +10,29 @@ const FUNNEL_STEPS = [
   'purchase_completed',
 ];
 
-export async function getFunnel(): Promise<FunnelResponse> {
+export async function getFunnel(from?: string, to?: string, source?: string): Promise<FunnelResponse> {
   const steps: FunnelStep[] = [];
   let prevCount = 0;
   let firstCount = 0;
 
   for (let i = 0; i < FUNNEL_STEPS.length; i++) {
     const eventName = FUNNEL_STEPS[i];
+    const conditions = [
+      sql`${events.eventName} = ${eventName}`,
+    ];
+
+    if (from && to) {
+      conditions.push(gte(events.createdAt, from));
+      conditions.push(lte(events.createdAt, to));
+    }
+
+    if (source) {
+      conditions.push(sql`json_extract(${events.properties}, '$.source') = ${source}`);
+    }
+
     const result = await db.select({ count: count(sql`DISTINCT ${events.userId}`) })
       .from(events)
-      .where(sql`${events.eventName} = ${eventName}`);
+      .where(and(...conditions));
 
     const currentCount = Number(result[0]?.count ?? 0);
     if (i === 0) firstCount = currentCount;

@@ -1,10 +1,13 @@
 import { db } from '@/lib/db';
 import { events } from '@/lib/db/schema';
-import { sql, count, sum, and } from 'drizzle-orm';
+import { sql, count, sum, and, gte, lte } from 'drizzle-orm';
 import { OverviewResponse } from '@/lib/types';
 
-export async function getOverview(from: string, to: string): Promise<OverviewResponse> {
-  const baseWhere = sql`${events.createdAt} >= ${from} AND ${events.createdAt} <= ${to}`;
+export async function getOverview(from: string, to: string, source?: string): Promise<OverviewResponse> {
+  const sourceFilter = source ? sql`json_extract(${events.properties}, '$.source') = ${source}` : undefined;
+  const baseWhere = sourceFilter
+    ? and(gte(events.createdAt, from), lte(events.createdAt, to), sourceFilter)
+    : and(gte(events.createdAt, from), lte(events.createdAt, to));
 
   const totalEventsResult = await db.select({ total: count() })
     .from(events)
@@ -16,7 +19,10 @@ export async function getOverview(from: string, to: string): Promise<OverviewRes
 
   const newSignupsResult = await db.select({ total: count() })
     .from(events)
-    .where(sql`${events.eventName} = 'signup_completed' AND ${events.createdAt} >= ${from} AND ${events.createdAt} <= ${to}`);
+    .where(sourceFilter
+      ? and(sql`${events.eventName} = 'signup_completed'`, gte(events.createdAt, from), lte(events.createdAt, to), sourceFilter)
+      : and(sql`${events.eventName} = 'signup_completed'`, gte(events.createdAt, from), lte(events.createdAt, to))
+    );
 
   const activeUsersResult = await db.select({ total: count(sql`DISTINCT ${events.userId}`) })
     .from(events)
@@ -24,7 +30,10 @@ export async function getOverview(from: string, to: string): Promise<OverviewRes
 
   const revenueResult = await db.select({ revenue: sum(sql`CAST(json_extract(${events.properties}, '$.amount') AS REAL)`) })
     .from(events)
-    .where(sql`${events.eventName} = 'purchase_completed' AND ${events.createdAt} >= ${from} AND ${events.createdAt} <= ${to}`);
+    .where(sourceFilter
+      ? and(sql`${events.eventName} = 'purchase_completed'`, gte(events.createdAt, from), lte(events.createdAt, to), sourceFilter)
+      : and(sql`${events.eventName} = 'purchase_completed'`, gte(events.createdAt, from), lte(events.createdAt, to))
+    );
 
   const topEventsRows = await db.select({
     eventName: events.eventName,
@@ -44,7 +53,12 @@ export async function getOverview(from: string, to: string): Promise<OverviewRes
     total: count(),
   })
     .from(events)
-    .where(sql`${events.createdAt} >= ${from} AND ${events.createdAt} <= ${to} AND json_extract(${events.properties}, '$.source') IS NOT NULL`)
+    .where(and(
+      gte(events.createdAt, from),
+      lte(events.createdAt, to),
+      sql`json_extract(${events.properties}, '$.source') IS NOT NULL`,
+      ...(sourceFilter ? [sourceFilter] : [])
+    ))
     .groupBy(sql`json_extract(${events.properties}, '$.source')`);
 
   const trafficSources = trafficSourcesRows

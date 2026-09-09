@@ -1,16 +1,20 @@
 import { db } from '@/lib/db';
 import { events } from '@/lib/db/schema';
-import { sql, count, and } from 'drizzle-orm';
+import { sql, count, and, gte, lte } from 'drizzle-orm';
 import { EventsSeriesResponse } from '@/lib/types';
 
-export async function getEventsSeries(from: string, to: string, eventName?: string): Promise<EventsSeriesResponse> {
+export async function getEventsSeries(from: string, to: string, eventName?: string, source?: string): Promise<EventsSeriesResponse> {
   const conditions = [
-    sql`${events.createdAt} >= ${from}`,
-    sql`${events.createdAt} <= ${to}`,
+    gte(events.createdAt, from),
+    lte(events.createdAt, to),
   ];
 
   if (eventName) {
     conditions.push(sql`${events.eventName} = ${eventName}`);
+  }
+
+  if (source) {
+    conditions.push(sql`json_extract(${events.properties}, '$.source') = ${source}`);
   }
 
   const rows = await db.select({
@@ -27,6 +31,6 @@ export async function getEventsSeries(from: string, to: string, eventName?: stri
   };
 }
 
-export async function getUserGrowth(from: string, to: string): Promise<EventsSeriesResponse> {
-  return getEventsSeries(from, to, 'signup_completed');
+export async function getUserGrowth(from: string, to: string, source?: string): Promise<EventsSeriesResponse> {
+  return getEventsSeries(from, to, 'signup_completed', source);
 }

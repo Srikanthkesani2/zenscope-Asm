@@ -9,13 +9,13 @@ interface DataPoint {
   count: number;
 }
 
-interface UserGrowthChartProps {
+interface EventsChartProps {
   from: string;
   to: string;
   source?: string;
 }
 
-export default function UserGrowthChart({ from, to, source }: UserGrowthChartProps) {
+export default function EventsChart({ from, to, source }: EventsChartProps) {
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,9 +31,9 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
       try {
         const params = new URLSearchParams({ from, to });
         if (source) params.set('source', source);
-        const res = await fetch(`/api/analytics/user-growth?${params.toString()}`);
+        const res = await fetch(`/api/analytics/events?${params.toString()}`);
         if (!res.ok) {
-          throw new Error(`Failed to fetch user growth data (status ${res.status})`);
+          throw new Error(`Failed to fetch events data (status ${res.status})`);
         }
         const json = await res.json();
         if (!cancelled) {
@@ -69,8 +69,8 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
   if (loading) {
     return (
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">User Growth Trend</h3>
-        <div className="h-64 sm:h-80 flex items-center justify-center text-gray-500">Loading chart data...</div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Trends</h3>
+        <div className="h-64 sm:h-80 flex items-center justify-center text-gray-500">Loading events data...</div>
       </div>
     );
   }
@@ -78,7 +78,7 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
   if (error) {
     return (
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">User Growth Trend</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Trends</h3>
         <div className="h-64 sm:h-80 flex items-center justify-center text-red-600">Error: {error}</div>
       </div>
     );
@@ -87,8 +87,8 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
   if (data.length === 0) {
     return (
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">User Growth Trend</h3>
-        <div className="h-64 sm:h-80 flex items-center justify-center text-gray-500">No signup data available for the selected period.</div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Trends</h3>
+        <div className="h-64 sm:h-80 flex items-center justify-center text-gray-500">No event data available for the selected period.</div>
       </div>
     );
   }
@@ -96,7 +96,7 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">User Growth Trend</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Event Trends</h3>
         <button
           onClick={handleChartClick}
           className="text-sm text-primary hover:underline whitespace-nowrap"
@@ -122,7 +122,7 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
                 const date = new Date(label);
                 return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
               }}
-              formatter={(value: unknown) => [`${value} signups`, 'Users']}
+              formatter={(value: unknown) => [`${value} events`, 'Count']}
             />
             <Area
               type="monotone"
@@ -143,9 +143,8 @@ export default function UserGrowthChart({ from, to, source }: UserGrowthChartPro
           from: drawerDate ? drawerDate : from,
           to: drawerDate ? drawerDate : to,
           source,
-          eventName: drawerDate ? undefined : 'signup_completed',
         }}
-        title={drawerDate ? `Records for ${drawerDate}` : 'All User Growth Records'}
+        title={drawerDate ? `Records for ${drawerDate}` : 'All Event Records'}
       />
     </div>
   );

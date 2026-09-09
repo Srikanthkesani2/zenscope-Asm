@@ -9,10 +9,10 @@ export const events = sqliteTable('events', {
   country: text('country'),
   referrer: text('referrer'),
   createdAt: text('created_at').notNull(),
-}, (t) => [
-  index('idx_events_user').on(t.userId),
-  index('idx_events_name_created').on(t.eventName, t.createdAt),
-  index('idx_events_created').on(t.createdAt),
-]);
+}, (t) => ({
+  idx_events_user: index('idx_events_user').on(t.userId),
+  idx_events_name_created: index('idx_events_name_created').on(t.eventName, t.createdAt),
+  idx_events_created: index('idx_events_created').on(t.createdAt),
+}));
 
 export type Event = typeof events.$inferSelect;

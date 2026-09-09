@@ -16,6 +16,18 @@ export default function DateFilter() {
     if (urlTo) setTo(urlTo);
   }, [searchParams]);
 
+  useEffect(() => {
+    if (from && to && from > to) {
+      const corrected = from;
+      setFrom(corrected);
+      setTo(corrected);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('from', corrected);
+      params.set('to', corrected);
+      router.replace(`?${params.toString()}`, { scroll: false });
+    }
+  }, [from, to, searchParams, router]);
+
   function updateDates(newFrom: string, newTo: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set('from', newFrom);
@@ -46,23 +58,23 @@ export default function DateFilter() {
   }
 
   return (
-    <div className="flex items-center gap-3 flex-wrap">
-      <label className="flex items-center gap-2 text-sm text-gray-700">
+    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+      <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700">
         <span>From</span>
         <input
           type="date"
           value={from}
           onChange={handleFromChange}
-          className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="border border-gray-300 rounded px-1.5 sm:px-2 py-1 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </label>
-      <label className="flex items-center gap-2 text-sm text-gray-700">
+      <label className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700">
         <span>To</span>
         <input
           type="date"
           value={to}
           onChange={handleToChange}
-          className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="border border-gray-300 rounded px-1.5 sm:px-2 py-1 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </label>
     </div>

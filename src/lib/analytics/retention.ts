@@ -14,16 +14,18 @@ function generateDateRange(from: string, to: string): string[] {
   return dates;
 }
 
-export async function getRetention(from: string, to: string): Promise<RetentionResponse> {
+export async function getRetention(from: string, to: string, source?: string): Promise<RetentionResponse> {
+  const sourceFilter = source ? sql`json_extract(${events.properties}, '$.source') = ${source}` : undefined;
+  const cohortWhere = sourceFilter
+    ? and(gte(events.createdAt, from), lte(events.createdAt, to), sourceFilter)
+    : and(gte(events.createdAt, from), lte(events.createdAt, to));
+
   const firstEvents = await db.select({
     userId: events.userId,
     firstDate: sql`date(MIN(${events.createdAt}))`.as('first_date'),
   })
     .from(events)
-    .where(and(
-      gte(events.createdAt, from),
-      lte(events.createdAt, to)
-    ))
+    .where(cohortWhere)
     .groupBy(events.userId);
 
   const cohortMap = new Map<string, string[]>();
@@ -58,7 +60,8 @@ export async function getRetention(from: string, to: string): Promise<RetentionR
             return sql`${acc}, ${val}`;
           }, sql``)})`,
           gte(events.createdAt, dayStart),
-          lte(events.createdAt, dayEnd)
+          lte(events.createdAt, dayEnd),
+          ...(sourceFilter ? [sourceFilter] : [])
         ));
 
       retention[`d${dayIndex}`] = cohortUsers.length > 0 ? Math.round((Number(active[0]?.cnt ?? 0) / cohortUsers.length) * 100) : 0;
